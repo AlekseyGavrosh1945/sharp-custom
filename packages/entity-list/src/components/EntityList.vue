@@ -476,6 +476,7 @@
                 // Обновляем локальные значения для немедленного отображения
                 this.$set(this.localFiltersValues, filter.key, value);
                 // Сохраняем в pending для применения при нажатии на поиск
+                // Если value === null, это очистка фильтра - тоже сохраняем
                 this.$set(this.pendingFilters, filter.key, value);
             },
             handleFilterPendingChange(filter, value) {
@@ -484,23 +485,38 @@
             },
             handleApplyPendingFilters(searchValue = null) {
                 // Применяем все pending фильтры
-                let nextQuery = { ...this.query };
+                // Сначала получаем текущие значения фильтров из store
+                const currentFiltersValues = this.storeGetter('filters/values');
                 
-                // Применяем pending фильтры
-                Object.keys(this.pendingFilters).forEach(filterKey => {
-                    const filter = this.resolvedFilters.find(f => f.key === filterKey);
-                    if (filter) {
-                        const value = this.pendingFilters[filterKey];
-                        nextQuery = {
-                            ...nextQuery,
-                            ...this.filterNextQuery({ filter, value }),
-                        };
+                // Объединяем текущие значения с pending значениями
+                // Pending значения имеют приоритет (перезаписывают текущие)
+                const allFiltersValues = { ...currentFiltersValues, ...this.pendingFilters };
+                
+                // Строим query для всех фильтров
+                // Начинаем с текущего query, но удаляем все filter_ параметры
+                let nextQuery = { ...this.query };
+                Object.keys(nextQuery).forEach(key => {
+                    if (key.startsWith('filter_')) {
+                        delete nextQuery[key];
                     }
+                });
+                
+                // Применяем все фильтры (и измененные, и неизмененные)
+                this.resolvedFilters.forEach(filter => {
+                    const value = allFiltersValues[filter.key];
+                    // Применяем значение фильтра (даже если оно null для очистки)
+                    const filterQuery = this.filterNextQuery({ filter, value });
+                    nextQuery = {
+                        ...nextQuery,
+                        ...filterQuery,
+                    };
                 });
                 
                 // Применяем поиск, если передан
                 if (searchValue !== null) {
                     nextQuery.search = searchValue;
+                } else if (this.search) {
+                    nextQuery.search = this.search;
                 }
                 
                 // Очищаем pending фильтры и локальные значения
@@ -840,6 +856,10 @@
                     config: this.config,
                     filtersValues: this.getFiltersValuesFromQuery(this.query),
                 });
+                
+                // Сбрасываем pending фильтры при инициализации
+                this.pendingFilters = {};
+                this.localFiltersValues = {};
 
                 this.$emit('change', {
                     data: this.data,
