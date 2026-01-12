@@ -492,25 +492,25 @@
                 // Pending значения имеют приоритет (перезаписывают текущие)
                 const allFiltersValues = { ...currentFiltersValues, ...this.pendingFilters };
                 
-                // Строим query для всех фильтров
-                // Начинаем с текущего query, но удаляем все filter_ параметры
+                // Получаем функцию для построения query параметров из store
+                const getFiltersQueryParams = this.storeGetter('filters/getQueryParams');
+                
+                // Строим query для всех фильтров сразу
+                const filtersQueryParams = getFiltersQueryParams(allFiltersValues);
+                
+                // Начинаем с текущего query, но удаляем все filter_ параметры и search
                 let nextQuery = { ...this.query };
                 Object.keys(nextQuery).forEach(key => {
-                    if (key.startsWith('filter_')) {
+                    if (key.startsWith('filter_') || key === 'search') {
                         delete nextQuery[key];
                     }
                 });
                 
-                // Применяем все фильтры (и измененные, и неизмененные)
-                this.resolvedFilters.forEach(filter => {
-                    const value = allFiltersValues[filter.key];
-                    // Применяем значение фильтра (даже если оно null для очистки)
-                    const filterQuery = this.filterNextQuery({ filter, value });
-                    nextQuery = {
-                        ...nextQuery,
-                        ...filterQuery,
-                    };
-                });
+                // Применяем query параметры фильтров
+                nextQuery = {
+                    ...nextQuery,
+                    ...filtersQueryParams,
+                };
                 
                 // Применяем поиск, если передан
                 if (searchValue !== null) {
