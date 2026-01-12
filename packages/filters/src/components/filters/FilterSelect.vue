@@ -103,12 +103,12 @@
         },
         methods: {
             handleSelect(value) {
-                console.log('[Sharp FilterSelect] handleSelect:', value);
+                alert('FilterSelect handleSelect: ' + JSON.stringify(value));
                 this.$emit('input', value);
             },
             handleAutocompleteInput(value) {
                 const emitValue = this.multiple ? value.map(v=>v.id) : (value||{}).id;
-                console.log('[Sharp FilterSelect] handleAutocompleteInput:', emitValue);
+                alert('FilterSelect handleAutocompleteInput: ' + JSON.stringify(emitValue));
                 this.$emit('input', emitValue);
             },
             handleClicked() {
