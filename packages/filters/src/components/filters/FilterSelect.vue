@@ -103,13 +103,13 @@
         },
         methods: {
             handleSelect(value) {
-                alert('FilterSelect handleSelect: ' + JSON.stringify(value));
-                this.$emit('input', value);
+                // Эмитим pending-change вместо input для отложенного применения
+                this.$emit('pending-change', value);
             },
             handleAutocompleteInput(value) {
                 const emitValue = this.multiple ? value.map(v=>v.id) : (value||{}).id;
-                alert('FilterSelect handleAutocompleteInput: ' + JSON.stringify(emitValue));
-                this.$emit('input', emitValue);
+                // Эмитим pending-change вместо input для отложенного применения
+                this.$emit('pending-change', emitValue);
             },
             handleClicked() {
                 if(this.opened) {

@@ -6,6 +6,7 @@
         :disabled="disabled"
         v-bind="filter"
         @input="handleInput"
+        @pending-change="handlePendingChange"
     />
 </template>
 
@@ -33,6 +34,9 @@
         methods: {
             handleInput(value) {
                 this.$emit('input', value);
+            },
+            handlePendingChange(value) {
+                this.$emit('pending-change', value);
             },
         }
     }

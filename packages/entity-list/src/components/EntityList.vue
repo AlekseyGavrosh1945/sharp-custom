@@ -59,8 +59,21 @@
                                                         :value="filtersValues[filter.key]"
                                                         :disabled="reordering"
                                                         @input="handleFilterChanged(filter, $event)"
+                                                        @pending-change="handleFilterPendingChange(filter, $event)"
                                                         :key="filter.id"
                                                     />
+                                                </div>
+                                            </template>
+                                            <template v-if="hasPendingFilters">
+                                                <div class="col-auto d-flex align-items-center">
+                                                    <button 
+                                                        class="btn btn-primary btn-sm d-inline-flex align-items-center" 
+                                                        @click="handleApplyPendingFilters"
+                                                        title="Применить фильтры"
+                                                    >
+                                                        <i class="fas fa-search me-1"></i>
+                                                        Поиск
+                                                    </button>
                                                 </div>
                                             </template>
                                             <template v-if="isFiltersValuated">
@@ -258,6 +271,9 @@
                 breadcrumb: null,
 
                 currentCommandInstanceId: null,
+
+                // Pending filter values - не примененные фильтры
+                pendingFilters: {},
             }
         },
         watch: {
@@ -439,6 +455,9 @@
                     this.instanceHasState(instance) && !this.instanceHasStateAuthorization(instance)
                 );
             },
+            hasPendingFilters() {
+                return Object.keys(this.pendingFilters).length > 0;
+            },
         },
         methods: {
             storeGetter(name) {
@@ -460,9 +479,38 @@
                 });
             },
             handleFilterChanged(filter, value) {
+                // Старый метод - для обратной совместимости (если фильтр все еще эмитит input)
                 this.storeDispatch('setQuery', {
                     ...this.query,
                     ...this.filterNextQuery({ filter, value }),
+                    page: 1,
+                });
+            },
+            handleFilterPendingChange(filter, value) {
+                // Сохраняем pending значение вместо немедленного применения
+                this.$set(this.pendingFilters, filter.key, value);
+            },
+            handleApplyPendingFilters() {
+                // Применяем все pending фильтры
+                let nextQuery = { ...this.query };
+                
+                Object.keys(this.pendingFilters).forEach(filterKey => {
+                    const filter = this.resolvedFilters.find(f => f.key === filterKey);
+                    if (filter) {
+                        const value = this.pendingFilters[filterKey];
+                        nextQuery = {
+                            ...nextQuery,
+                            ...this.filterNextQuery({ filter, value }),
+                        };
+                    }
+                });
+                
+                // Очищаем pending фильтры
+                this.pendingFilters = {};
+                
+                // Применяем все изменения
+                this.storeDispatch('setQuery', {
+                    ...nextQuery,
                     page: 1,
                 });
             },
