@@ -485,19 +485,16 @@
             },
             handleApplyPendingFilters(searchValue = null) {
                 // Применяем все pending фильтры
-                // Сначала получаем текущие значения фильтров из store
-                const currentFiltersValues = this.storeGetter('filters/values');
-                
-                // Объединяем текущие значения с pending значениями
-                // Pending значения имеют приоритет (перезаписывают текущие)
-                const allFiltersValues = { ...currentFiltersValues, ...this.pendingFilters };
-                
+                // Берём значения фильтров так, как они сейчас отображаются в UI
+                // (store + локальные изменения)
+                const uiFiltersValues = this.filtersValues;
+
                 // Получаем функцию для построения query параметров из store
                 const getFiltersQueryParams = this.storeGetter('filters/getQueryParams');
-                
-                // Строим query для всех фильтров сразу
-                const filtersQueryParams = getFiltersQueryParams(allFiltersValues);
-                
+
+                // Строим query для всех фильтров сразу на основе текущего UI-состояния
+                const filtersQueryParams = getFiltersQueryParams(uiFiltersValues);
+
                 // Начинаем с текущего query, но удаляем все filter_ параметры и search
                 let nextQuery = { ...this.query };
                 Object.keys(nextQuery).forEach(key => {
@@ -505,24 +502,24 @@
                         delete nextQuery[key];
                     }
                 });
-                
+
                 // Применяем query параметры фильтров
                 nextQuery = {
                     ...nextQuery,
                     ...filtersQueryParams,
                 };
-                
+
                 // Применяем поиск, если передан
                 if (searchValue !== null) {
                     nextQuery.search = searchValue;
                 } else if (this.search) {
                     nextQuery.search = this.search;
                 }
-                
+
                 // Очищаем pending фильтры и локальные значения
                 this.pendingFilters = {};
                 this.localFiltersValues = {};
-                
+
                 // Применяем все изменения (это отправит запрос)
                 this.storeDispatch('setQuery', {
                     ...nextQuery,
