@@ -516,6 +516,13 @@
                     nextQuery.search = this.search;
                 }
 
+                // ВАЖНО: Обновляем store с новыми значениями фильтров ПЕРЕД отправкой запроса
+                // Это нужно, чтобы после перезагрузки данные фильтров сохранились
+                this.storeDispatch('update', {
+                    config: this.config,
+                    filtersValues: uiFiltersValues,
+                });
+
                 // Очищаем pending фильтры и локальные значения
                 this.pendingFilters = {};
                 this.localFiltersValues = {};
