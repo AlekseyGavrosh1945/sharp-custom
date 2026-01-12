@@ -103,12 +103,14 @@
         },
         methods: {
             handleSelect(value) {
-                // Эмитим pending-change вместо input для отложенного применения
+                // Эмитим input для обновления UI и pending-change для отложенного применения
+                this.$emit('input', value);
                 this.$emit('pending-change', value);
             },
             handleAutocompleteInput(value) {
                 const emitValue = this.multiple ? value.map(v=>v.id) : (value||{}).id;
-                // Эмитим pending-change вместо input для отложенного применения
+                // Эмитим input для обновления UI и pending-change для отложенного применения
+                this.$emit('input', emitValue);
                 this.$emit('pending-change', emitValue);
             },
             handleClicked() {

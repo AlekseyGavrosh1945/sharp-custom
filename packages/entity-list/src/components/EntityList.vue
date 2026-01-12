@@ -46,6 +46,8 @@
                                             :placeholder="l('action_bar.list.search.placeholder')"
                                             :disabled="reordering"
                                             @submit="handleSearchSubmitted"
+                                            @search-click="handleSearchButtonClicked"
+                                            ref="searchComponent"
                                         />
                                     </div>
                                 </template>
@@ -62,18 +64,6 @@
                                                         @pending-change="handleFilterPendingChange(filter, $event)"
                                                         :key="filter.id"
                                                     />
-                                                </div>
-                                            </template>
-                                            <template v-if="hasPendingFilters">
-                                                <div class="col-auto d-flex align-items-center">
-                                                    <button 
-                                                        class="btn btn-primary btn-sm d-inline-flex align-items-center" 
-                                                        @click="handleApplyPendingFilters"
-                                                        title="Применить фильтры"
-                                                    >
-                                                        <i class="fas fa-search me-1"></i>
-                                                        Поиск
-                                                    </button>
                                                 </div>
                                             </template>
                                             <template v-if="isFiltersValuated">
@@ -274,6 +264,8 @@
 
                 // Pending filter values - не примененные фильтры
                 pendingFilters: {},
+                // Локальные значения фильтров для отображения (обновляются сразу, но не применяются)
+                localFiltersValues: {},
             }
         },
         watch: {
@@ -304,7 +296,9 @@
                 return this.storeGetter('filters/isValuated')(this.resolvedFilters) || this.search;
             },
             filtersValues() {
-                return this.storeGetter('filters/values');
+                // Используем локальные значения, если они есть, иначе значения из store
+                const storeValues = this.storeGetter('filters/values');
+                return { ...storeValues, ...this.localFiltersValues };
             },
             filterNextQuery() {
                 return this.storeGetter('filters/nextQuery');
@@ -455,9 +449,6 @@
                     this.instanceHasState(instance) && !this.instanceHasStateAuthorization(instance)
                 );
             },
-            hasPendingFilters() {
-                return Object.keys(this.pendingFilters).length > 0;
-            },
         },
         methods: {
             storeGetter(name) {
@@ -472,28 +463,30 @@
              */
             handleSearchSubmitted(search) {
                 this.search = search;
-                this.storeDispatch('setQuery', {
-                    ...this.query,
-                    search,
-                    page: 1,
-                });
+                // При нажатии на поиск применяем и поиск, и все pending фильтры
+                this.handleApplyPendingFilters(search);
+            },
+            handleSearchButtonClicked() {
+                // При нажатии на кнопку поиска применяем все pending фильтры
+                this.handleApplyPendingFilters(this.search);
             },
             handleFilterChanged(filter, value) {
-                // Старый метод - для обратной совместимости (если фильтр все еще эмитит input)
-                this.storeDispatch('setQuery', {
-                    ...this.query,
-                    ...this.filterNextQuery({ filter, value }),
-                    page: 1,
-                });
+                // Обновляем локальное состояние для UI, но НЕ отправляем запрос
+                // Запрос будет отправлен только при нажатии на кнопку поиска
+                // Обновляем локальные значения для немедленного отображения
+                this.$set(this.localFiltersValues, filter.key, value);
+                // Сохраняем в pending для применения при нажатии на поиск
+                this.$set(this.pendingFilters, filter.key, value);
             },
             handleFilterPendingChange(filter, value) {
                 // Сохраняем pending значение вместо немедленного применения
                 this.$set(this.pendingFilters, filter.key, value);
             },
-            handleApplyPendingFilters() {
+            handleApplyPendingFilters(searchValue = null) {
                 // Применяем все pending фильтры
                 let nextQuery = { ...this.query };
                 
+                // Применяем pending фильтры
                 Object.keys(this.pendingFilters).forEach(filterKey => {
                     const filter = this.resolvedFilters.find(f => f.key === filterKey);
                     if (filter) {
@@ -505,10 +498,16 @@
                     }
                 });
                 
-                // Очищаем pending фильтры
-                this.pendingFilters = {};
+                // Применяем поиск, если передан
+                if (searchValue !== null) {
+                    nextQuery.search = searchValue;
+                }
                 
-                // Применяем все изменения
+                // Очищаем pending фильтры и локальные значения
+                this.pendingFilters = {};
+                this.localFiltersValues = {};
+                
+                // Применяем все изменения (это отправит запрос)
                 this.storeDispatch('setQuery', {
                     ...nextQuery,
                     page: 1,

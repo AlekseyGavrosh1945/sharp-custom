@@ -30,7 +30,8 @@
         },
         methods: {
             handleChanged(e) {
-                // Эмитим pending-change вместо input для отложенного применения
+                // Эмитим input для обновления UI и pending-change для отложенного применения
+                this.$emit('input', e.target.checked);
                 this.$emit('pending-change', e.target.checked);
             },
         },

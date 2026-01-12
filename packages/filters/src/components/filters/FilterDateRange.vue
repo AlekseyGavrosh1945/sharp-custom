@@ -45,7 +45,8 @@
                 this.$refs.range.focus();
             },
             handleInput(range) {
-                // Эмитим pending-change вместо input для отложенного применения
+                // Эмитим input для обновления UI и pending-change для отложенного применения
+                this.$emit('input', range);
                 this.$emit('pending-change', range);
             },
         }
