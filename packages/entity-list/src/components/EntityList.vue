@@ -298,7 +298,19 @@
             filtersValues() {
                 // Используем локальные значения, если они есть, иначе значения из store
                 const storeValues = this.storeGetter('filters/values');
-                return { ...storeValues, ...this.localFiltersValues };
+                const merged = { ...storeValues, ...this.localFiltersValues };
+                // Удаляем ключи с null значениями из localFiltersValues, чтобы они не перезаписывали store
+                Object.keys(this.localFiltersValues).forEach(key => {
+                    if (this.localFiltersValues[key] === null || 
+                        (Array.isArray(this.localFiltersValues[key]) && this.localFiltersValues[key].length === 0)) {
+                        // Если значение null или пустой массив, удаляем его из merged, чтобы использовалось значение из store
+                        // Но только если оно не в pendingFilters (т.е. это реальная очистка)
+                        if (!(key in this.pendingFilters)) {
+                            delete merged[key];
+                        }
+                    }
+                });
+                return merged;
             },
             filterNextQuery() {
                 return this.storeGetter('filters/nextQuery');

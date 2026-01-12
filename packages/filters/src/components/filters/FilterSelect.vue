@@ -103,12 +103,24 @@
         },
         methods: {
             handleSelect(value) {
+                // При очистке value может быть null, undefined или пустым массивом
+                const normalizedValue = value == null || (this.multiple && (!Array.isArray(value) || value.length === 0)) 
+                    ? (this.multiple ? [] : null) 
+                    : value;
                 // Эмитим input для обновления UI и pending-change для отложенного применения
-                this.$emit('input', value);
-                this.$emit('pending-change', value);
+                this.$emit('input', normalizedValue);
+                this.$emit('pending-change', normalizedValue);
             },
             handleAutocompleteInput(value) {
-                const emitValue = this.multiple ? value.map(v=>v.id) : (value||{}).id;
+                // При очистке value может быть null или пустым массивом
+                let emitValue;
+                if (this.multiple) {
+                    emitValue = Array.isArray(value) && value.length > 0 
+                        ? value.map(v => v.id || v) 
+                        : [];
+                } else {
+                    emitValue = (value && value.id !== undefined) ? value.id : null;
+                }
                 // Эмитим input для обновления UI и pending-change для отложенного применения
                 this.$emit('input', emitValue);
                 this.$emit('pending-change', emitValue);
